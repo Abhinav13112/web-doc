@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 require('dotenv').config();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -19,6 +20,9 @@ const supabaseAdmin = (supabaseUrl && (supabaseServiceRoleKey || supabaseAnonKey
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      realtime: {
+        transport: WebSocket
       }
     })
   : null;
@@ -37,6 +41,9 @@ function createUserScopedClient(accessToken) {
       autoRefreshToken: false,
       persistSession: false
     },
+    realtime: {
+      transport: WebSocket
+    },
     global: {
       headers: {
         Authorization: `Bearer ${accessToken}`
@@ -51,3 +58,4 @@ module.exports = {
   supabaseUrl,
   supabaseAnonKey
 };
+
