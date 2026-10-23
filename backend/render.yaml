@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: docuvault-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: FRONTEND_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: documents
+      - key: MAX_FILE_SIZE_MB
+        value: 50
+      - key: USER_STORAGE_QUOTA_MB
+        value: 500

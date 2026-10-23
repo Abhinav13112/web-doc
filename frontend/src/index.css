@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg-primary: #f8fafc;
+    --color-bg-secondary: #ffffff;
+    --color-border: #e2e8f0;
+    --color-text-primary: #0f172a;
+    --color-text-secondary: #64748b;
+  }
+
+  .dark {
+    --color-bg-primary: #090d16;
+    --color-bg-secondary: #111827;
+    --color-border: #1f293d;
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #94a3b8;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Custom modern scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Document content styles for Word / Text preview */
+.preview-docx-content {
+  font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.preview-docx-content p {
+  margin-bottom: 0.75rem;
+}
+
+.preview-docx-content h1, 
+.preview-docx-content h2, 
+.preview-docx-content h3 {
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.preview-docx-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.preview-docx-content table, 
+.preview-docx-content th, 
+.preview-docx-content td {
+  border: 1px solid #cbd5e1;
+  padding: 0.5rem 0.75rem;
+}
+
+.preview-docx-content th {
+  background-color: #f1f5f9;
+}
+
+.dark .preview-docx-content table, 
+.dark .preview-docx-content th, 
+.dark .preview-docx-content td {
+  border-color: #334155;
+}
+
+.dark .preview-docx-content th {
+  background-color: #1e293b;
+}

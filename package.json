@@ -1,0 +1,23 @@
+{
+  "name": "docuvault-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DocuVault - Full-Stack Production Document Management System",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "keywords": [
+    "document-management",
+    "full-stack",
+    "react",
+    "express",
+    "supabase",
+    "tailwind"
+  ],
+  "author": "DocuVault Team",
+  "license": "MIT"
+}
