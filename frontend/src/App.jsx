@@ -96,6 +96,20 @@ export function App() {
   const [currentCategory, setCurrentCategory] = useState('all');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Local documents cache for offline / demo mode
+  const [localDocs, setLocalDocs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('docuvault-local-docs');
+      return saved ? JSON.parse(saved) : DEMO_DOCUMENTS;
+    } catch {
+      return DEMO_DOCUMENTS;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('docuvault-local-docs', JSON.stringify(localDocs));
+  }, [localDocs]);
+
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -143,8 +157,8 @@ export function App() {
     setLoading(true);
 
     if (isDemoUser) {
-      // Simulate real filtering for demo mode
-      let filtered = [...DEMO_DOCUMENTS];
+      // Filter from localDocs
+      let filtered = [...localDocs];
       if (currentView === 'trash') {
         filtered = filtered.filter(d => d.is_trashed);
       } else {
@@ -162,7 +176,7 @@ export function App() {
 
       filtered.sort((a, b) => {
         if (sortBy === 'name') return order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-        if (sortBy === 'file_size') return order === 'asc' ? a.file_size - b.file_size : b.file_size - a.file_size;
+        if (sortBy === 'file_size') return order === 'asc' ? (a.file_size || 0) - (b.file_size || 0) : (b.file_size || 0) - (a.file_size || 0);
         return order === 'asc'
           ? new Date(a.created_at) - new Date(b.created_at)
           : new Date(b.created_at) - new Date(a.created_at);
@@ -198,16 +212,34 @@ export function App() {
     } finally {
       setLoading(false);
     }
-  }, [user, isDemoUser, currentView, currentCategory, debouncedSearch, sortBy, order, page]);
+  }, [user, isDemoUser, localDocs, currentView, currentCategory, debouncedSearch, sortBy, order, page]);
 
   // Load stats
   const fetchStats = useCallback(async () => {
     if (!user) return;
 
     if (isDemoUser) {
-      const active = DEMO_DOCUMENTS.filter(d => !d.is_trashed);
-      const totalSize = active.reduce((acc, d) => acc + d.file_size, 0);
+      const active = localDocs.filter(d => !d.is_trashed);
+      const totalSize = active.reduce((acc, d) => acc + (d.file_size || 0), 0);
       const quota = 500 * 1024 * 1024;
+      const trashed = localDocs.filter(d => d.is_trashed);
+      const catDist = {
+        pdf: { count: 0, bytes: 0 },
+        word: { count: 0, bytes: 0 },
+        spreadsheet: { count: 0, bytes: 0 },
+        presentation: { count: 0, bytes: 0 },
+        image: { count: 0, bytes: 0 },
+        text: { count: 0, bytes: 0 },
+        archive: { count: 0, bytes: 0 },
+        other: { count: 0, bytes: 0 }
+      };
+
+      for (const d of active) {
+        const cat = catDist[d.category] ? d.category : 'other';
+        catDist[cat].count += 1;
+        catDist[cat].bytes += (d.file_size || 0);
+      }
+
       setStats({
         totalDocuments: active.length,
         totalSizeBytes: totalSize,
@@ -216,18 +248,9 @@ export function App() {
         formattedStorageQuota: '500 MB',
         percentUsed: parseFloat(((totalSize / quota) * 100).toFixed(1)),
         totalFavorites: active.filter(d => d.is_favorite).length,
-        totalTrashed: DEMO_DOCUMENTS.filter(d => d.is_trashed).length,
+        totalTrashed: trashed.length,
         recentUploads: active.slice(0, 5),
-        categoryDistribution: {
-          pdf: { count: active.filter(d => d.category === 'pdf').length, bytes: 2457600 },
-          word: { count: active.filter(d => d.category === 'word').length, bytes: 1548576 },
-          spreadsheet: { count: active.filter(d => d.category === 'spreadsheet').length, bytes: 843200 },
-          presentation: { count: active.filter(d => d.category === 'presentation').length, bytes: 6890000 },
-          image: { count: active.filter(d => d.category === 'image').length, bytes: 3245600 },
-          text: { count: 0, bytes: 0 },
-          archive: { count: 0, bytes: 0 },
-          other: { count: 0, bytes: 0 }
-        }
+        categoryDistribution: catDist
       });
       return;
     }
@@ -240,7 +263,7 @@ export function App() {
     } catch (err) {
       console.warn('API error fetching stats:', err.message);
     }
-  }, [user, isDemoUser]);
+  }, [user, isDemoUser, localDocs]);
 
   useEffect(() => {
     if (user) {
@@ -277,7 +300,7 @@ export function App() {
     try {
       const newFavStatus = !doc.is_favorite;
       if (isDemoUser) {
-        setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, is_favorite: newFavStatus } : d));
+        setLocalDocs(prev => prev.map(d => d.id === doc.id ? { ...d, is_favorite: newFavStatus } : d));
         showToast(newFavStatus ? 'Added to favorites' : 'Removed from favorites', 'success');
         return;
       }
@@ -292,7 +315,7 @@ export function App() {
 
   const handleRenameConfirm = async (id, newName) => {
     if (isDemoUser) {
-      setDocuments(prev => prev.map(d => d.id === id ? { ...d, name: newName } : d));
+      setLocalDocs(prev => prev.map(d => d.id === id ? { ...d, name: newName } : d));
       showToast(`Document renamed to ${newName}`, 'success');
       return;
     }
@@ -310,7 +333,7 @@ export function App() {
       isDestructive: false,
       action: async () => {
         if (isDemoUser) {
-          setDocuments(prev => prev.filter(d => d.id !== doc.id));
+          setLocalDocs(prev => prev.map(d => d.id === doc.id ? { ...d, is_trashed: true, trashed_at: new Date().toISOString() } : d));
           showToast(`'${doc.name}' moved to trash.`, 'info');
           setDeleteConfirm({ isOpen: false });
           return;
@@ -327,7 +350,7 @@ export function App() {
   const handleRestore = async (doc) => {
     try {
       if (isDemoUser) {
-        setDocuments(prev => prev.filter(d => d.id !== doc.id));
+        setLocalDocs(prev => prev.map(d => d.id === doc.id ? { ...d, is_trashed: false, trashed_at: null } : d));
         showToast(`'${doc.name}' restored.`, 'success');
         return;
       }
@@ -349,7 +372,7 @@ export function App() {
       isDestructive: true,
       action: async () => {
         if (isDemoUser) {
-          setDocuments(prev => prev.filter(d => d.id !== doc.id));
+          setLocalDocs(prev => prev.filter(d => d.id !== doc.id));
           showToast(`'${doc.name}' permanently deleted.`, 'info');
           setDeleteConfirm({ isOpen: false });
           return;
@@ -372,7 +395,7 @@ export function App() {
       isDestructive: true,
       action: async () => {
         if (isDemoUser) {
-          setDocuments([]);
+          setLocalDocs(prev => prev.filter(d => !d.is_trashed));
           showToast('Trash emptied.', 'info');
           setDeleteConfirm({ isOpen: false });
           return;
@@ -504,7 +527,10 @@ export function App() {
       <UploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
-        onUploadSuccess={() => {
+        onUploadSuccess={(newDoc) => {
+          if (newDoc) {
+            setLocalDocs(prev => [newDoc, ...prev]);
+          }
           fetchDocuments();
           fetchStats();
           showToast('File(s) uploaded successfully!', 'success');

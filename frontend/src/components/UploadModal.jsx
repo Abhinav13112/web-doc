@@ -11,8 +11,10 @@ import {
 } from 'lucide-react';
 import { documentsApi } from '../services/api';
 import { formatBytes } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 export function UploadModal({ isOpen, onClose, onUploadSuccess }) {
+  const { isDemoUser } = useAuth();
   const [fileQueue, setFileQueue] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -73,6 +75,47 @@ export function UploadModal({ isOpen, onClose, onUploadSuccess }) {
 
     // Upload files sequentially or in batch
     for (const queueItem of readyFiles) {
+      if (isDemoUser) {
+        setFileQueue(prev =>
+          prev.map(item => item.id === queueItem.id ? { ...item, status: 'uploading', progress: 40 } : item)
+        );
+        await new Promise(r => setTimeout(r, 350));
+        setFileQueue(prev =>
+          prev.map(item => item.id === queueItem.id ? { ...item, progress: 80 } : item)
+        );
+        await new Promise(r => setTimeout(r, 200));
+
+        const ext = '.' + queueItem.file.name.split('.').pop().toLowerCase();
+        let cat = 'other';
+        if (ext === '.pdf') cat = 'pdf';
+        else if (['.doc', '.docx'].includes(ext)) cat = 'word';
+        else if (['.xls', '.xlsx', '.csv', '.ods'].includes(ext)) cat = 'spreadsheet';
+        else if (['.ppt', '.pptx'].includes(ext)) cat = 'presentation';
+        else if (['.jpg', '.jpeg', '.png', '.webp', '.svg', '.gif'].includes(ext)) cat = 'image';
+        else if (['.txt', '.md', '.json', '.js', '.py', '.html', '.css'].includes(ext)) cat = 'text';
+        else if (['.zip', '.rar', '.7z', '.tar', '.gz'].includes(ext)) cat = 'archive';
+
+        const newDoc = {
+          id: 'local-' + Math.random().toString(36).substring(2, 9),
+          name: queueItem.file.name,
+          original_name: queueItem.file.name,
+          category: cat,
+          file_ext: ext,
+          file_size: queueItem.file.size,
+          is_favorite: false,
+          is_trashed: false,
+          created_at: new Date().toISOString(),
+          localBlobUrl: URL.createObjectURL(queueItem.file)
+        };
+
+        setFileQueue(prev =>
+          prev.map(item => item.id === queueItem.id ? { ...item, status: 'success', progress: 100 } : item)
+        );
+        anyUploaded = true;
+        if (onUploadSuccess) onUploadSuccess(newDoc);
+        continue;
+      }
+
       // Update status to uploading
       setFileQueue(prev =>
         prev.map(item => item.id === queueItem.id ? { ...item, status: 'uploading', progress: 10 } : item)

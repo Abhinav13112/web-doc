@@ -51,9 +51,25 @@ export function DocumentPreviewModal({ document: doc, isOpen, onClose, onDownloa
 
     async function loadPreview() {
       try {
-        const response = await documentsApi.getPreviewUrl(doc.id);
-        const url = response.data?.previewUrl;
-        if (!url) throw new Error('Preview URL could not be generated.');
+        let url = doc.localBlobUrl;
+        if (!url) {
+          try {
+            const response = await documentsApi.getPreviewUrl(doc.id);
+            url = response.data?.previewUrl;
+          } catch (e) {
+            console.warn('API preview url fetch error:', e.message);
+          }
+        }
+
+        if (!url && !['.pdf', '.docx', '.xlsx', '.xls', '.csv', '.png', '.jpg', '.jpeg', '.webp'].includes(doc.file_ext?.toLowerCase())) {
+          // Unsupported formats will show metadata card
+          if (isMounted) setLoading(false);
+          return;
+        }
+
+        if (!url) {
+          throw new Error('Preview URL could not be generated. Please make sure the backend is connected or download the file directly.');
+        }
 
         if (!isMounted) return;
         setPreviewUrl(url);
